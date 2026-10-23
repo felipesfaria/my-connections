@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mock Connections board</title>
+    <link rel="stylesheet" href="../src/panel.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 32px;
+        font: 14px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        background: #fff;
+        color: #121212;
+      }
+      .wrap {
+        width: 560px;
+      }
+      .board {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .card {
+        position: relative;
+        display: grid;
+        place-items: center;
+        height: 80px;
+        border: 0;
+        border-radius: 6px;
+        background: #efefe6;
+        font: 700 16px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      .card[aria-pressed='true'] {
+        background: #5a594e;
+        color: #fff;
+      }
+      /* The real board keeps a second copy of the word for its flip animation. */
+      .card .ghost {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+      }
+      .solved {
+        margin-bottom: 8px;
+        padding: 12px;
+        border-radius: 6px;
+        background: #a0c35a;
+        text-align: center;
+      }
+      .solved b {
+        display: block;
+        text-transform: uppercase;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .controls button {
+        padding: 10px 18px;
+        border: 1px solid #121212;
+        border-radius: 20px;
+        background: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      #toast {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 16px;
+        border-radius: 6px;
+        background: #121212;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Mock Connections board</h1>
+    <p>
+      A stand-in for the real page so the extension can be exercised offline. Open the console to
+      poke at <code>__myConnections</code>.
+    </p>
+    <div class="wrap">
+      <div id="solved"></div>
+      <div class="board" id="board"></div>
+      <div class="controls">
+        <button id="shuffle">Shuffle</button>
+        <button id="deselect">Deselect All</button>
+        <button id="submit">Submit</button>
+      </div>
+    </div>
+
+    <script>
+      // Minimal stand-ins for the extension APIs the content scripts use.
+      window.chrome = {
+        storage: {
+          local: {
+            _data: {},
+            async get(key) {
+              if (key === null) return { ...this._data };
+              return key in this._data ? { [key]: this._data[key] } : {};
+            },
+            async set(entries) {
+              Object.assign(this._data, entries);
+            },
+            async remove(keys) {
+              for (const k of [].concat(keys)) delete this._data[k];
+            },
+          },
+        },
+        runtime: { onMessage: { addListener() {} } },
+      };
+    </script>
+
+    <script>
+      const GROUPS = [
+        { name: 'Shades of blue', words: ['NAVY', 'ROYAL', 'SKY', 'TEAL'] },
+        { name: 'Card games', words: ['BRIDGE', 'HEARTS', 'SPIT', 'WAR'] },
+        { name: 'Kinds of bar', words: ['CROW', 'SALAD', 'SNACK', 'TOWEL'] },
+        { name: '___ board', words: ['CHALK', 'DART', 'KEY', 'SURF'] },
+      ];
+
+      const boardEl = document.getElementById('board');
+      const solvedEl = document.getElementById('solved');
+      let live = GROUPS.flatMap((g) => g.words);
+
+      const shuffle = (list) => {
+        const out = list.slice();
+        for (let i = out.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [out[i], out[j]] = [out[j], out[i]];
+        }
+        return out;
+      };
+
+      function render() {
+        boardEl.textContent = '';
+        live.forEach((word, i) => {
+          const card = document.createElement('button');
+          card.className = 'card';
+          card.dataset.testid = `card-${i}`;
+          card.setAttribute('aria-pressed', 'false');
+          card.dataset.word = word;
+          // Title case on purpose: the real page may uppercase through CSS.
+          // The word is rendered twice, as the real board does.
+          const label = word[0] + word.slice(1).toLowerCase();
+          card.innerHTML = `<span class="face">${label}</span><span class="ghost" aria-hidden="true">${label}</span>`;
+          card.addEventListener('click', () => {
+            const on = card.getAttribute('aria-pressed') === 'true';
+            if (!on && selection().length >= 4) return;
+            card.setAttribute('aria-pressed', on ? 'false' : 'true');
+          });
+          boardEl.appendChild(card);
+        });
+      }
+
+      const cards = () => [...boardEl.querySelectorAll('.card')];
+      const selection = () =>
+        cards()
+          .filter((c) => c.getAttribute('aria-pressed') === 'true')
+          .map((c) => c.dataset.word);
+
+      function toast(text) {
+        const el = document.createElement('div');
+        el.id = 'toast';
+        el.setAttribute('role', 'alert');
+        el.textContent = text;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1800);
+      }
+
+      document.getElementById('deselect').addEventListener('click', () => {
+        for (const c of cards()) c.setAttribute('aria-pressed', 'false');
+      });
+
+      document.getElementById('shuffle').addEventListener('click', () => {
+        live = shuffle(live);
+        render();
+      });
+
+      document.getElementById('submit').addEventListener('click', () => {
+        const picked = selection();
+        if (picked.length !== 4) return toast('Select four words');
+
+        const group = GROUPS.find((g) => picked.every((w) => g.words.includes(w)));
+        const best = Math.max(...GROUPS.map((g) => picked.filter((w) => g.words.includes(w)).length));
+
+        if (group) {
+          live = live.filter((w) => !group.words.includes(w));
+          const banner = document.createElement('div');
+          banner.className = 'solved';
+          banner.innerHTML = `<b>${group.name}</b>${group.words.join(', ')}`;
+          solvedEl.appendChild(banner);
+          render();
+        } else {
+          for (const c of cards()) c.setAttribute('aria-pressed', 'false');
+          toast(best === 3 ? 'One away...' : 'Not quite');
+        }
+      });
+
+      live = shuffle(live);
+      render();
+    </script>
+
+    <script src="../src/board.js"></script>
+    <script src="../src/store.js"></script>
+    <script src="../src/panel.js"></script>
+    <script src="../src/content.js"></script>
+  </body>
+</html>

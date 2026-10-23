@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My Connections</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fg: #121212;
+        --muted: #6b6b6b;
+        --chip: #efefe6;
+        --line: #d8d8d8;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fg: #f2f2f2;
+          --muted: #9a9a9a;
+          --chip: #2e2e2e;
+          --line: #3a3a3a;
+        }
+      }
+      body {
+        width: 248px;
+        margin: 0;
+        padding: 12px;
+        font: 13px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        color: var(--fg);
+      }
+      h1 {
+        margin: 0 0 2px;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+      }
+      p {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 11.5px;
+      }
+      button {
+        display: block;
+        width: 100%;
+        margin-bottom: 6px;
+        padding: 7px 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--chip);
+        color: var(--fg);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: var(--muted);
+      }
+      #status {
+        margin: 8px 0 0;
+        padding-top: 8px;
+        border-top: 1px solid var(--line);
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>My Connections</h1>
+    <p>Drag a word in the panel to rearrange it, click it to select it on the board.</p>
+    <button id="toggle">Show / hide panel</button>
+    <button id="clear">Clear today&rsquo;s guesses &amp; layout</button>
+    <p id="status">Checking the page&hellip;</p>
+    <script src="popup.js"></script>
+  </body>
+</html>

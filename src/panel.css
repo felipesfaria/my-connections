@@ -1,0 +1,256 @@
+/* Styles for the injected helper panel. Everything is scoped under #mc-panel. */
+
+#mc-panel {
+  --mc-bg: #ffffff;
+  --mc-fg: #121212;
+  --mc-muted: #6b6b6b;
+  --mc-line: #d8d8d8;
+  --mc-chip: #efefe6;
+  --mc-chip-hover: #e3e3d8;
+  --mc-sel: #5a594e;
+  --mc-sel-fg: #ffffff;
+  --mc-yellow: #f9df6d;
+  --mc-green: #a0c35a;
+  --mc-grey: #cfcfcf;
+
+  position: fixed;
+  top: 96px;
+  right: 24px;
+  z-index: 2147483000;
+  width: 320px;
+  box-sizing: border-box;
+  font-family: 'Libre Franklin', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: var(--mc-fg);
+  background: var(--mc-bg);
+  border: 1px solid var(--mc-line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  #mc-panel {
+    --mc-bg: #1b1b1b;
+    --mc-fg: #f2f2f2;
+    --mc-muted: #9a9a9a;
+    --mc-line: #3a3a3a;
+    --mc-chip: #2e2e2e;
+    --mc-chip-hover: #3a3a3a;
+    --mc-sel: #e8e8e8;
+    --mc-sel-fg: #121212;
+    --mc-grey: #4a4a4a;
+  }
+}
+
+/* Set from the page's own background so the panel matches the board, not the OS. */
+#mc-panel.mc-dark {
+  --mc-bg: #1b1b1b;
+  --mc-fg: #f2f2f2;
+  --mc-muted: #9a9a9a;
+  --mc-line: #3a3a3a;
+  --mc-chip: #2e2e2e;
+  --mc-chip-hover: #3a3a3a;
+  --mc-sel: #e8e8e8;
+  --mc-sel-fg: #121212;
+  --mc-grey: #4a4a4a;
+}
+
+#mc-panel.mc-light {
+  --mc-bg: #ffffff;
+  --mc-fg: #121212;
+  --mc-muted: #6b6b6b;
+  --mc-line: #d8d8d8;
+  --mc-chip: #efefe6;
+  --mc-chip-hover: #e3e3d8;
+  --mc-sel: #5a594e;
+  --mc-sel-fg: #ffffff;
+  --mc-grey: #cfcfcf;
+}
+
+#mc-panel * {
+  box-sizing: border-box;
+}
+
+#mc-panel .mc-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--mc-line);
+  cursor: grab;
+}
+
+#mc-panel.mc-dragging .mc-head {
+  cursor: grabbing;
+}
+
+#mc-panel .mc-grip {
+  color: var(--mc-muted);
+  font-size: 14px;
+  line-height: 1;
+}
+
+#mc-panel .mc-title {
+  flex: 1;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#mc-panel .mc-btn {
+  all: unset;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: var(--mc-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#mc-panel .mc-btn:hover {
+  background: var(--mc-chip);
+  color: var(--mc-fg);
+}
+
+#mc-panel .mc-body {
+  padding: 10px;
+}
+
+#mc-panel.mc-collapsed .mc-body {
+  display: none;
+}
+
+#mc-panel .mc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+#mc-panel .mc-chip {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  padding: 3px 2px;
+  border-radius: 6px;
+  background: var(--mc-chip);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-align: center;
+  word-break: break-word;
+  hyphens: auto;
+  cursor: grab;
+}
+
+#mc-panel .mc-chip:hover {
+  background: var(--mc-chip-hover);
+}
+
+#mc-panel .mc-chip.mc-sel {
+  background: var(--mc-sel);
+  color: var(--mc-sel-fg);
+}
+
+#mc-panel .mc-chip.mc-drag {
+  opacity: 0.35;
+}
+
+#mc-panel .mc-chip.mc-over {
+  outline: 2px dashed var(--mc-muted);
+  outline-offset: 1px;
+}
+
+#mc-panel .mc-hint,
+#mc-panel .mc-empty {
+  margin-top: 8px;
+  color: var(--mc-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+#mc-panel .mc-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 12px 0 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mc-line);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+#mc-panel .mc-count {
+  color: var(--mc-muted);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#mc-panel .mc-guesses {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+#mc-panel .mc-guess {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+#mc-panel .mc-badge {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--mc-grey);
+}
+
+#mc-panel .mc-guess.mc-correct .mc-badge {
+  background: var(--mc-green);
+}
+
+#mc-panel .mc-guess.mc-one-away .mc-badge {
+  background: var(--mc-yellow);
+}
+
+#mc-panel .mc-words {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+#mc-panel .mc-word {
+  padding: 3px 2px;
+  border-radius: 4px;
+  background: var(--mc-chip);
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#mc-panel .mc-guess.mc-correct .mc-word {
+  background: var(--mc-green);
+  color: #121212;
+}
+
+#mc-panel .mc-note {
+  margin: 0 0 6px 22px;
+  color: var(--mc-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
