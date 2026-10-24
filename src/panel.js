@@ -5,7 +5,7 @@
 (() => {
   const NS = (window.__myConnections ||= {});
 
-  let root, gridEl, guessesEl, countEl, collapseBtn;
+  let root, gridEl, guessesEl, countEl, collapseBtn, warnEl;
   let order = []; // my own arrangement of the words still on the board
   let dragFrom = null;
   let dragged = false;
@@ -25,6 +25,7 @@
       </div>
       <div class="mc-body">
         <div class="mc-grid"></div>
+        <div class="mc-warn" hidden></div>
         <div class="mc-hint">Drag a word onto another to swap them. Click it to select it on the board.</div>
         <div class="mc-sub">Previous guesses <span class="mc-count"></span></div>
         <div class="mc-guesses"></div>
@@ -32,6 +33,7 @@
     document.body.appendChild(root);
 
     gridEl = root.querySelector('.mc-grid');
+    warnEl = root.querySelector('.mc-warn');
     guessesEl = root.querySelector('.mc-guesses');
     countEl = root.querySelector('.mc-count');
     collapseBtn = root.querySelector('[data-act="collapse"]');
@@ -215,6 +217,39 @@
     if (index != null && !dragged) NS.board.clickWord(order[index]);
   }
 
+  /* ---------- dead-end warning ---------- */
+
+  /** Flags a selection the history has already ruled out. */
+  function renderWarning() {
+    if (!warnEl) return;
+    const warning = NS.deduce.check(NS.board.selection(), store().guesses);
+    const flagged = new Set(warning ? warning.words : []);
+    for (const chip of gridEl.querySelectorAll('.mc-chip')) {
+      chip.classList.toggle('mc-flag', flagged.has(chip.textContent));
+    }
+
+    warnEl.textContent = '';
+    warnEl.hidden = !warning;
+    if (!warning) return;
+
+    const title = document.createElement('strong');
+    const detail = document.createElement('span');
+    if (warning.kind === 'repeat') {
+      title.textContent = 'Already guessed. ';
+      detail.textContent =
+        warning.result === 'one-away'
+          ? 'These four came back one away.'
+          : 'These four were wrong.';
+    } else {
+      title.textContent = 'Can’t be a group. ';
+      detail.textContent = `${listWords(warning.words)} were in a guess that wasn’t one away, so they don’t all belong together.`;
+    }
+    warnEl.append(title, detail);
+  }
+
+  const listWords = (words) =>
+    words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`;
+
   /* ---------- guess history ---------- */
 
   function renderGuesses() {
@@ -286,6 +321,7 @@
     setWords(boardWords) {
       syncOrder(boardWords);
       renderGrid();
+      renderWarning();
       matchPageTheme();
     },
     refreshSelection() {
@@ -293,8 +329,12 @@
       for (const chip of gridEl.querySelectorAll('.mc-chip')) {
         chip.classList.toggle('mc-sel', NS.board.isSelected(chip.textContent));
       }
+      renderWarning();
     },
-    refreshGuesses: renderGuesses,
+    refreshGuesses() {
+      renderGuesses();
+      renderWarning();
+    },
     toggle() {
       if (!root) return;
       root.style.display = root.style.display === 'none' ? '' : 'none';

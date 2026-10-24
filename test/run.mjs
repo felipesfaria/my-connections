@@ -112,6 +112,50 @@ const TEST = `(async () => {
   check('guesses reach storage', () =>
     Object.values(chrome.storage.local._data)[0].guesses.length === 3);
 
+  // HEARTS, SPIT, CROW, CHALK came back wrong rather than one away, so no
+  // three of them share a group and any selection around three is a dead end.
+  const warning = () => document.querySelector('#mc-panel .mc-warn');
+  const flagged = () =>
+    [...document.querySelectorAll('#mc-panel .mc-chip.mc-flag')].map((c) => c.textContent).sort();
+  const clear = async () => { document.getElementById('deselect').click(); await sleep(150); };
+
+  await clear();
+  pick(['HEARTS', 'SPIT', 'CROW', 'TOWEL']);
+  await sleep(200);
+  check('warns about a selection the history rules out', () => !warning().hidden);
+  check('names the three ruled-out words', () => {
+    const text = warning().textContent;
+    return ['HEARTS', 'SPIT', 'CROW'].every((w) => text.includes(w)) && !text.includes('TOWEL');
+  });
+  check('flags only those three chips', () => flagged().join() === 'CROW,HEARTS,SPIT');
+
+  await clear();
+  pick(['HEARTS', 'SPIT', 'TOWEL', 'SURF']);
+  await sleep(200);
+  check('stays quiet when only two words were ruled out together', () => warning().hidden);
+  check('flags nothing then', () => flagged().length === 0);
+
+  await clear();
+  pick(['HEARTS', 'SPIT', 'CROW', 'CHALK']);
+  await sleep(200);
+  check('warns when the exact four were already submitted', () =>
+    !warning().hidden && /already guessed/i.test(warning().textContent));
+
+  await clear();
+
+  // The deduction itself, away from the board.
+  const deduce = (selection, guesses) => __myConnections.deduce.check(selection, guesses);
+  const wrong = [{ words: ['A', 'B', 'C', 'D'], result: 'wrong' }];
+  const nearMiss = [{ words: ['A', 'B', 'C', 'D'], result: 'one-away' }];
+  check('a one-away guess rules nothing out', () => deduce(['A', 'B', 'C', 'E'], nearMiss) === null);
+  check('three words from a wrong guess are ruled out', () => {
+    const found = deduce(['A', 'B', 'C', 'E'], wrong);
+    return found?.kind === 'ruled-out' && found.words.sort().join() === 'A,B,C';
+  });
+  check('two shared words are not enough', () => deduce(['A', 'B', 'X', 'Y'], wrong) === null);
+  check('it fires as soon as the third word is picked', () =>
+    deduce(['A', 'B', 'C'], wrong)?.kind === 'ruled-out');
+
   // Fallback path: without test ids the board has to be found by its text.
   for (const card of document.querySelectorAll('.card')) delete card.dataset.testid;
   __myConnections.board.refresh();

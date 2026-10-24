@@ -12,6 +12,7 @@
   --mc-yellow: #f9df6d;
   --mc-green: #a0c35a;
   --mc-grey: #cfcfcf;
+  --mc-flag: #b58900;
 
   position: fixed;
   top: 96px;
@@ -40,6 +41,7 @@
     --mc-sel: #e8e8e8;
     --mc-sel-fg: #121212;
     --mc-grey: #4a4a4a;
+    --mc-flag: #f0c93a;
   }
 }
 
@@ -54,9 +56,11 @@
   --mc-sel: #e8e8e8;
   --mc-sel-fg: #121212;
   --mc-grey: #4a4a4a;
+  --mc-flag: #f0c93a;
 }
 
 #mc-panel.mc-light {
+  --mc-flag: #b58900;
   --mc-bg: #ffffff;
   --mc-fg: #121212;
   --mc-muted: #6b6b6b;
@@ -164,6 +168,25 @@
 #mc-panel .mc-chip.mc-over {
   outline: 2px dashed var(--mc-muted);
   outline-offset: 1px;
+}
+
+#mc-panel .mc-chip.mc-flag {
+  outline: 2px solid var(--mc-flag);
+  outline-offset: 1px;
+}
+
+#mc-panel .mc-warn {
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: var(--mc-yellow);
+  color: #121212;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+#mc-panel .mc-warn[hidden] {
+  display: none;
 }
 
 #mc-panel .mc-hint,

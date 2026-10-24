@@ -27,7 +27,7 @@
         "https://www.nytimes.com/games/connections*",
         "https://www.nytimes.com/puzzles/connections*"
       ],
-      "js": ["src/board.js", "src/store.js", "src/panel.js", "src/content.js"],
+      "js": ["src/board.js", "src/store.js", "src/deduce.js", "src/panel.js", "src/content.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     }
