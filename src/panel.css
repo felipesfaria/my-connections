@@ -18,7 +18,7 @@
   top: 96px;
   right: 24px;
   z-index: 2147483000;
-  width: 320px;
+  width: 380px;
   box-sizing: border-box;
   font-family: 'Libre Franklin', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 13px;
@@ -132,24 +132,29 @@
 
 #mc-panel .mc-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
 }
 
 #mc-panel .mc-chip {
   display: grid;
   place-items: center;
-  min-height: 42px;
-  padding: 3px 2px;
+  min-height: 50px;
+  padding: 4px 3px;
   border-radius: 6px;
   background: var(--mc-chip);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.01em;
   text-align: center;
+  cursor: grab;
+}
+
+/* Only for a word too long to fit even at the smallest size. */
+#mc-panel .mc-chip.mc-break,
+#mc-panel .mc-word.mc-break {
   word-break: break-word;
   hyphens: auto;
-  cursor: grab;
 }
 
 #mc-panel .mc-chip:hover {
@@ -181,7 +186,7 @@
   border-radius: 6px;
   background: var(--mc-yellow);
   color: #121212;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -247,7 +252,7 @@
 
 #mc-panel .mc-words {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 3px;
   flex: 1;
   min-width: 0;
@@ -257,12 +262,10 @@
   padding: 3px 2px;
   border-radius: 4px;
   background: var(--mc-chip);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 700;
+  line-height: 1.25;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 #mc-panel .mc-guess.mc-correct .mc-word {

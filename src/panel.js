@@ -109,6 +109,11 @@
 
   function setCollapsed(collapsed, persist = true) {
     root.classList.toggle('mc-collapsed', collapsed);
+    // Nothing is measurable while collapsed, so size the words on the way out.
+    if (!collapsed && gridEl) {
+      fitText(gridEl.querySelectorAll('.mc-chip'), 8);
+      fitText(guessesEl.querySelectorAll('.mc-word'), 7);
+    }
     collapseBtn.innerHTML = collapsed ? '&#43;' : '&#8722;';
     collapseBtn.title = collapsed ? 'Expand' : 'Collapse';
     if (persist) store().setPanel({ collapsed });
@@ -136,6 +141,38 @@
       if (NS.board.isSelected(word)) chip.classList.add('mc-sel');
       gridEl.appendChild(chip);
     });
+    fitText(gridEl.querySelectorAll('.mc-chip'), 8);
+  }
+
+  /*
+   * Shrinks a word until it fits on one line: splitting INTERSTITIAL across
+   * two lines reads worse than a smaller font. Entries of several words still
+   * wrap at their spaces, which is what the break is for.
+   */
+  function fitText(elements, min) {
+    for (const el of elements) {
+      el.style.fontSize = '';
+      el.classList.remove('mc-break');
+      if (!el.clientWidth) continue; // collapsed panel: nothing to measure yet
+      const style = getComputedStyle(el);
+      const room =
+        el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      let size = parseFloat(style.fontSize);
+      while (widestLine(el) > room && size > min) {
+        size -= 0.5;
+        el.style.fontSize = `${size}px`;
+      }
+      if (widestLine(el) > room) el.classList.add('mc-break');
+    }
+  }
+
+  /** The widest rendered line of an element's text. */
+  function widestLine(el) {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    let widest = 0;
+    for (const rect of range.getClientRects()) widest = Math.max(widest, rect.width);
+    return widest;
   }
 
   const indexOfChip = (el) => {
@@ -286,6 +323,8 @@
       }
       row.appendChild(words);
       guessesEl.appendChild(row);
+
+      fitText(row.querySelectorAll('.mc-word'), 7);
 
       const note = noteFor(guess);
       if (note) {

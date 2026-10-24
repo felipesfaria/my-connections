@@ -156,6 +156,57 @@ const TEST = `(async () => {
   check('it fires as soon as the third word is picked', () =>
     deduce(['A', 'B', 'C'], wrong)?.kind === 'ruled-out');
 
+  // Long words have to shrink to fit: a chip reading INTERSTITIA / L is worse
+  // than a smaller font. Several words still wrap at their spaces.
+  const LONG = ['INTERSTITIAL', 'CONSTELLATION', 'ROCK AND ROLL', 'SKYSCRAPER'];
+  [...document.querySelectorAll('.card')].slice(0, 4).forEach((card, i) => {
+    card.dataset.word = LONG[i];
+    const label = LONG[i][0] + LONG[i].slice(1).toLowerCase();
+    for (const span of card.querySelectorAll('span')) span.textContent = label;
+  });
+  __myConnections.board.refresh();
+  await sleep(300);
+
+  const widest = (el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    return Math.max(0, ...[...range.getClientRects()].map((r) => r.width));
+  };
+  const room = (el) => {
+    const s = getComputedStyle(el);
+    return el.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+  };
+  const lineCount = (el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    return range.getClientRects().length;
+  };
+  const chipFor = (word) => chips().find((c) => c.textContent === word);
+
+  check('a long word is shrunk to fit its chip', () => {
+    const chip = chipFor('INTERSTITIAL');
+    return chip && widest(chip) <= room(chip);
+  });
+  check('it is not split across lines', () => lineCount(chipFor('INTERSTITIAL')) === 1);
+  check('a longer word shrinks further', () => {
+    const chip = chipFor('CONSTELLATION');
+    return widest(chip) <= room(chip) && lineCount(chip) === 1;
+  });
+  check('the grid still fits inside the panel', () => {
+    // The grid grows its own box, so it never overflows itself: a column wide
+    // enough to hold a long word pushes the panel instead.
+    const grid = document.querySelector('#mc-panel .mc-grid');
+    return grid.getBoundingClientRect().width <= panel.getBoundingClientRect().width;
+  });
+  check('several words still wrap at the space, at full size', () => {
+    const chip = chipFor('ROCK AND ROLL');
+    return lineCount(chip) === 2 && getComputedStyle(chip).fontSize === '12px';
+  });
+  check('short words keep the base size', () => {
+    const short = chips().find((c) => c.textContent.length <= 4);
+    return getComputedStyle(short).fontSize === '12px';
+  });
+
   // Fallback path: without test ids the board has to be found by its text.
   for (const card of document.querySelectorAll('.card')) delete card.dataset.testid;
   __myConnections.board.refresh();
