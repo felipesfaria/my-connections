@@ -5,9 +5,11 @@
 (() => {
   const NS = (window.__myConnections ||= {});
 
+  const COLS = 4; // words per row
+
   let root, gridEl, guessesEl, countEl, collapseBtn, warnEl;
   let order = []; // my own arrangement of the words still on the board
-  let dragFrom = null;
+  let drag = null; // { kind: 'word' | 'row', from } while a drag is in flight
   let dragged = false;
 
   const store = () => NS.store;
@@ -26,7 +28,7 @@
       <div class="mc-body">
         <div class="mc-grid"></div>
         <div class="mc-warn" hidden></div>
-        <div class="mc-hint">Drag a word onto another to swap them. Click it to select it on the board.</div>
+        <div class="mc-hint">Drag a word onto another to swap them, or a row&rsquo;s handle onto another row to swap the two rows. Click a word to select it on the board.</div>
         <div class="mc-sub">Previous guesses <span class="mc-count"></span></div>
         <div class="mc-guesses"></div>
       </div>`;
@@ -44,7 +46,7 @@
     gridEl.addEventListener('dragover', onDragOver);
     gridEl.addEventListener('dragleave', onDragLeave);
     gridEl.addEventListener('drop', onDrop);
-    gridEl.addEventListener('dragend', onDragEnd);
+    gridEl.addEventListener('dragend', endDrag);
 
     restorePlacement();
     matchPageTheme();
@@ -132,16 +134,34 @@
 
   function renderGrid() {
     gridEl.textContent = '';
-    order.forEach((word, index) => {
-      const chip = document.createElement('div');
-      chip.className = 'mc-chip';
-      chip.textContent = word;
-      chip.draggable = true;
-      chip.dataset.index = String(index);
-      if (NS.board.isSelected(word)) chip.classList.add('mc-sel');
-      gridEl.appendChild(chip);
-    });
+    for (let start = 0; start < order.length; start += COLS) {
+      const row = document.createElement('div');
+      row.className = 'mc-row';
+      row.dataset.row = String(start / COLS);
+      row.appendChild(rowGrip());
+
+      order.slice(start, start + COLS).forEach((word, offset) => {
+        const chip = document.createElement('div');
+        chip.className = 'mc-chip';
+        chip.textContent = word;
+        chip.draggable = true;
+        chip.dataset.index = String(start + offset);
+        if (NS.board.isSelected(word)) chip.classList.add('mc-sel');
+        row.appendChild(chip);
+      });
+      gridEl.appendChild(row);
+    }
     fitText(gridEl.querySelectorAll('.mc-chip'), 8);
+  }
+
+  /** The handle that drags a whole row instead of a single word. */
+  function rowGrip() {
+    const grip = document.createElement('div');
+    grip.className = 'mc-rowgrip';
+    grip.draggable = true;
+    grip.title = 'Drag onto another row to swap the two rows';
+    grip.textContent = '\u283F';
+    return grip;
   }
 
   /*
@@ -175,52 +195,82 @@
     return widest;
   }
 
+  const closest = (el, selector) => (el instanceof Element ? el.closest(selector) : null);
+
   const indexOfChip = (el) => {
-    const chip = el instanceof Element ? el.closest('.mc-chip') : null;
+    const chip = closest(el, '.mc-chip');
     return chip ? Number(chip.dataset.index) : null;
   };
 
+  const wordsOfRow = (row) => order.slice(row * COLS, row * COLS + COLS);
+
   function onDragStart(event) {
-    dragFrom = indexOfChip(event.target);
-    if (dragFrom == null) return;
+    const grip = closest(event.target, '.mc-rowgrip');
+    if (grip) {
+      const row = grip.closest('.mc-row');
+      drag = { kind: 'row', from: Number(row.dataset.row) };
+      // The handle on its own would make a meaningless drag image; carry the
+      // whole row, held where it was picked up.
+      const rect = row.getBoundingClientRect();
+      event.dataTransfer.setDragImage(row, event.clientX - rect.left, event.clientY - rect.top);
+      event.dataTransfer.setData('text/plain', wordsOfRow(drag.from).join(' '));
+      row.classList.add('mc-drag');
+    } else {
+      const from = indexOfChip(event.target);
+      if (from == null) return;
+      drag = { kind: 'word', from };
+      event.dataTransfer.setData('text/plain', order[from]);
+      closest(event.target, '.mc-chip').classList.add('mc-drag');
+    }
     dragged = true;
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', order[dragFrom]);
-    event.target.closest('.mc-chip').classList.add('mc-drag');
   }
 
+  /** What a drag of the kind in flight can be dropped on, at or above a node. */
+  const dropTarget = (el) => closest(el, drag.kind === 'row' ? '.mc-row' : '.mc-chip');
+
+  const dropIndex = (target) =>
+    Number(drag.kind === 'row' ? target.dataset.row : target.dataset.index);
+
   function onDragOver(event) {
-    if (dragFrom == null) return;
+    if (!drag) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    const chip = event.target instanceof Element ? event.target.closest('.mc-chip') : null;
     for (const el of gridEl.querySelectorAll('.mc-over')) el.classList.remove('mc-over');
-    if (chip && Number(chip.dataset.index) !== dragFrom) chip.classList.add('mc-over');
+    const target = dropTarget(event.target);
+    if (target && dropIndex(target) !== drag.from) target.classList.add('mc-over');
   }
 
   function onDragLeave(event) {
-    const chip = event.target instanceof Element ? event.target.closest('.mc-chip') : null;
-    chip?.classList.remove('mc-over');
+    if (!drag) return;
+    dropTarget(event.target)?.classList.remove('mc-over');
   }
 
   function onDrop(event) {
-    const to = indexOfChip(event.target);
-    if (dragFrom == null || to == null) return endDrag(event);
+    const target = drag ? dropTarget(event.target) : null;
+    if (!target) return endDrag();
     event.preventDefault();
-    [order[dragFrom], order[to]] = [order[to], order[dragFrom]];
+    const to = dropIndex(target);
+    if (drag.kind === 'row') swapRows(drag.from, to);
+    else [order[drag.from], order[to]] = [order[to], order[drag.from]];
     store().setOrder(order);
     renderGrid();
-    // The drop re-rendered the grid, so the dragged chip is gone and its
+    // The drop re-rendered the grid, so the dragged node is gone and its
     // dragend will never reach us: clear the drag state here instead.
-    endDrag(event);
+    endDrag();
   }
 
-  function onDragEnd(event) {
-    endDrag(event);
+  /** Swaps two rows column by column, so no word can be lost or duplicated. */
+  function swapRows(from, to) {
+    for (let col = 0; col < COLS; col++) {
+      const a = from * COLS + col;
+      const b = to * COLS + col;
+      if (a < order.length && b < order.length) [order[a], order[b]] = [order[b], order[a]];
+    }
   }
 
   function endDrag() {
-    dragFrom = null;
+    drag = null;
     for (const el of gridEl.querySelectorAll('.mc-drag, .mc-over')) {
       el.classList.remove('mc-drag', 'mc-over');
     }

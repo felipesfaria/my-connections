@@ -40,6 +40,19 @@ const TEST = `(async () => {
     return null;
   };
   const chips = () => [...document.querySelectorAll('#mc-panel .mc-chip')];
+  const words = () => chips().map((c) => c.textContent);
+  const gridRows = () => [...document.querySelectorAll('#mc-panel .mc-row')];
+  const grips = () => [...document.querySelectorAll('#mc-panel .mc-rowgrip')];
+  const dragTo = (from, to) => {
+    const dt = new DataTransfer();
+    const fire = (el, type, cancelable = false) =>
+      el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable, dataTransfer: dt }));
+    fire(from, 'dragstart');
+    fire(to, 'dragover', true);
+    fire(to, 'drop', true);
+    fire(from, 'dragend');
+  };
+  const stored = () => Object.values(chrome.storage.local._data)[0];
   const rows = () => [...document.querySelectorAll('#mc-panel .mc-guess')];
   const notes = () =>
     [...document.querySelectorAll('#mc-panel .mc-note')].map((n) => n.textContent).join(' | ');
@@ -55,23 +68,39 @@ const TEST = `(async () => {
   });
 
   // Drag the first word onto the sixth: the two swap places.
-  const before = chips().map((c) => c.textContent);
-  const dt = new DataTransfer();
-  const from = chips()[0], to = chips()[5];
-  from.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
-  to.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
-  to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
-  from.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+  const before = words();
+  dragTo(chips()[0], chips()[5]);
   await sleep(100);
-  const after = chips().map((c) => c.textContent);
+  const after = words();
   check('drag swaps the two words', () => after[5] === before[0] && after[0] === before[5]);
   check('the other words stay put', () =>
     after.every((w, i) => i === 0 || i === 5 || w === before[i]));
   await sleep(400);
   check('layout is persisted', () => {
-    const { order } = Object.values(chrome.storage.local._data)[0];
+    const { order } = stored();
     return order[5] === before[0] && order[0] === before[5];
   });
+
+  // Drag the second row's handle onto the fourth row: the two rows swap whole.
+  check('the grid is laid out as four rows with a handle each', () =>
+    gridRows().length === 4 && grips().length === 4);
+  const beforeRows = words();
+  dragTo(grips()[1], gridRows()[3]);
+  await sleep(100);
+  const afterRows = words();
+  const row = (list, i) => list.slice(i * 4, i * 4 + 4).join();
+  check('dragging a row handle swaps the two rows', () =>
+    row(afterRows, 1) === row(beforeRows, 3) && row(afterRows, 3) === row(beforeRows, 1));
+  check('the rows in between stay put', () =>
+    row(afterRows, 0) === row(beforeRows, 0) && row(afterRows, 2) === row(beforeRows, 2));
+  await sleep(400);
+  check('the row order is persisted', () => stored().order.join() === afterRows.join());
+
+  // A word dragged onto a row, or a row onto a word, must not cross the wires.
+  dragTo(chips()[0], grips()[2]);
+  await sleep(100);
+  check('dropping a word on a row handle changes nothing', () =>
+    words().join() === afterRows.join());
 
   // Clicks must still work after a drag: the dropped chip is a new node.
   const chip = chips()[0];
@@ -109,8 +138,7 @@ const TEST = `(async () => {
   check('a plain miss is logged as wrong', () =>
     rows().length === 3 && rows()[2].classList.contains('mc-wrong'));
   check('every guess lists its four words', () => rows()[2].querySelectorAll('.mc-word').length === 4);
-  check('guesses reach storage', () =>
-    Object.values(chrome.storage.local._data)[0].guesses.length === 3);
+  check('guesses reach storage', () => stored().guesses.length === 3);
 
   // HEARTS, SPIT, CROW, CHALK came back wrong rather than one away, so no
   // three of them share a group and any selection around three is a dead end.
@@ -215,6 +243,8 @@ const TEST = `(async () => {
     const onBoard = [...document.querySelectorAll('.card')].map((c) => c.dataset.word).sort();
     return __myConnections.board.words().sort().join() === onBoard.join();
   });
+  check('a partly solved board still fills whole rows', () =>
+    gridRows().every((r) => r.querySelectorAll('.mc-chip').length === 4));
   return log;
 })()`;
 

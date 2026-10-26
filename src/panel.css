@@ -132,8 +132,27 @@
 
 #mc-panel .mc-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
+}
+
+#mc-panel .mc-row {
+  display: grid;
+  grid-template-columns: 11px repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+#mc-panel .mc-rowgrip {
+  display: grid;
+  place-items: center;
+  color: var(--mc-muted);
+  opacity: 0.5;
+  font-size: 11px;
+  line-height: 1;
+  cursor: grab;
+}
+
+#mc-panel .mc-rowgrip:hover {
+  opacity: 1;
 }
 
 #mc-panel .mc-chip {
@@ -166,13 +185,20 @@
   color: var(--mc-sel-fg);
 }
 
-#mc-panel .mc-chip.mc-drag {
+#mc-panel .mc-chip.mc-drag,
+#mc-panel .mc-row.mc-drag {
   opacity: 0.35;
 }
 
 #mc-panel .mc-chip.mc-over {
   outline: 2px dashed var(--mc-muted);
   outline-offset: 1px;
+}
+
+/* A row is outlined further out, so it reads as the row and not as a chip. */
+#mc-panel .mc-row.mc-over {
+  outline: 2px dashed var(--mc-muted);
+  outline-offset: 3px;
 }
 
 #mc-panel .mc-chip.mc-flag {

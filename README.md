@@ -4,8 +4,9 @@ A Chrome extension for the [NYT Connections](https://www.nytimes.com/games/conne
 It adds a small panel next to the board with the two things the game does not give you:
 
 - **Rearrange the words freely.** The panel holds a copy of the 16 words that you can drag into
-  any order, so you can park your four candidates on one row and keep them there. The real board
-  only offers a random shuffle, which throws your grouping away.
+  any order, so you can park your four candidates on one row and keep them there — and drag a
+  whole row by its handle once the group is together. The real board only offers a random shuffle,
+  which throws your grouping away.
 - **See your previous guesses.** Every group you submit is recorded with its outcome —
   green for correct (with the category name), yellow for "one away", grey for wrong — so you
   never burn a life re-submitting something you already tried.
@@ -24,6 +25,7 @@ layout. Your arrangement and history are saved per day and survive a page reload
 | Control | What it does |
 | --- | --- |
 | Drag a word onto another | Swaps the two; every other word stays where it is |
+| Drag a row's ⠿ handle onto another row | Swaps the two rows, four words at a time |
 | Click a word | Selects / deselects that tile on the real board |
 | ⇆ | Shuffles your layout (the board is untouched) |
 | ↻ | Resets your layout to the board's own order |
