@@ -7,11 +7,11 @@ It adds a small panel next to the board with the two things the game does not gi
   any order, so you can park your four candidates on one row and keep them there — and drag a
   whole row by its handle once the group is together. The real board only offers a random shuffle,
   which throws your grouping away.
-- **See your previous guesses.** Every group you submit is recorded with its outcome —
-  a solved group keeps the colour the board gave that row (with the category name), a near miss
-  is orange and anything further off is red — so you never burn a life re-submitting something
-  you already tried. Solved groups stack at the top as they do on the board, with the misses
-  below them in the order you made them.
+- **See your previous misses.** A group that does not match is listed under the grid, orange for
+  one away and red for anything further off, so you never burn a life re-submitting something you
+  already tried. A group that does match stays in the grid instead, as a block in the colour the
+  board gave that row with its category name, pinned above the words still in play — the same as
+  the board itself.
 
 Clicking a word in the panel selects it on the real board, so you can play entirely from your own
 layout. Your arrangement and history are saved per day and survive a page reload.
@@ -74,8 +74,8 @@ node test/run.mjs     # headless Chrome, no dependencies to install
 ```
 
 It checks that the panel mounts, that dragging swaps two words and sticks, that clicking a chip
-selects the real tile (and still does so after a drag), and that correct / one away / wrong guesses
-are each recorded with their words and category. Set `CHROME=<path>` if Chrome is not where it
+selects the real tile (and still does so after a drag), that a solved group stays in the grid in
+its own colour with its category name, and that one away / wrong guesses are listed below it. Set `CHROME=<path>` if Chrome is not where it
 usually lives.
 
 ## If the panel does not show up

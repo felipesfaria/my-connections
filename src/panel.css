@@ -157,6 +157,37 @@
   opacity: 1;
 }
 
+/*
+ * A solved group: one block in the colour the board gave that row, its name
+ * above its four words on a single comma-separated line, as the board writes
+ * a solved row out.
+ */
+#mc-panel .mc-done {
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  border-radius: 6px;
+  background: var(--mc-match, var(--mc-green));
+  color: #121212;
+  text-align: center;
+  cursor: default;
+}
+
+#mc-panel .mc-done .mc-name {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+#mc-panel .mc-done .mc-list {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
 #mc-panel .mc-chip {
   display: grid;
   place-items: center;
@@ -288,17 +319,7 @@
   text-align: center;
 }
 
-/*
- * A guess carries its outcome as a colour: a solved group takes the colour the
- * board gave that row (--mc-match, read off the page), a near miss is orange
- * and anything further off is red.
- */
-#mc-panel .mc-guess.mc-correct .mc-badge,
-#mc-panel .mc-guess.mc-correct .mc-word {
-  background: var(--mc-match, var(--mc-green));
-  color: #121212;
-}
-
+/* A miss carries how far off it was as a colour: orange for one away, red beyond that. */
 #mc-panel .mc-guess.mc-one-away .mc-badge,
 #mc-panel .mc-guess.mc-one-away .mc-word {
   background: var(--mc-orange);

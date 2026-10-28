@@ -29,7 +29,7 @@
         <div class="mc-grid"></div>
         <div class="mc-warn" hidden></div>
         <div class="mc-hint">Drag a word onto another to swap them, or a row&rsquo;s handle onto another row to swap the two rows. Click a word to select it on the board.</div>
-        <div class="mc-sub">Previous guesses <span class="mc-count"></span></div>
+        <div class="mc-sub">Misses <span class="mc-count"></span></div>
         <div class="mc-guesses"></div>
       </div>`;
     document.body.appendChild(root);
@@ -113,7 +113,7 @@
     root.classList.toggle('mc-collapsed', collapsed);
     // Nothing is measurable while collapsed, so size the words on the way out.
     if (!collapsed && gridEl) {
-      fitText(gridEl.querySelectorAll('.mc-chip'), 8);
+      fitGrid();
       fitText(guessesEl.querySelectorAll('.mc-word'), 7);
     }
     collapseBtn.innerHTML = collapsed ? '&#43;' : '&#8722;';
@@ -134,6 +134,8 @@
 
   function renderGrid() {
     gridEl.textContent = '';
+    for (const guess of solvedGroups()) gridEl.appendChild(solvedRow(guess));
+
     for (let start = 0; start < order.length; start += COLS) {
       const row = document.createElement('div');
       row.className = 'mc-row';
@@ -151,7 +153,35 @@
       });
       gridEl.appendChild(row);
     }
-    fitText(gridEl.querySelectorAll('.mc-chip'), 8);
+    fitGrid();
+  }
+
+  const solvedGroups = () => store().guesses.filter((guess) => guess.result === 'correct');
+
+  /*
+   * A group already solved, drawn the way the board draws it: a block in the
+   * colour that row was given, holding its name above its four words, pinned
+   * above the words still in play. Nothing about it is draggable or clickable —
+   * the group is settled, and the board locks it too.
+   */
+  function solvedRow(guess) {
+    const row = document.createElement('div');
+    row.className = 'mc-done';
+    if (guess.color) row.style.setProperty('--mc-match', guess.color);
+
+    if (guess.category) {
+      const name = document.createElement('div');
+      name.className = 'mc-name';
+      name.textContent = guess.category;
+      row.appendChild(name);
+    }
+
+    // One comma-separated line, the way the board writes out a solved row.
+    const words = document.createElement('div');
+    words.className = 'mc-list';
+    words.textContent = guess.words.join(', ');
+    row.appendChild(words);
+    return row;
   }
 
   /** The handle that drags a whole row instead of a single word. */
@@ -184,6 +214,12 @@
       }
       if (widestLine(el) > room) el.classList.add('mc-break');
     }
+  }
+
+  /** A solved group holds four words on one line, so it fits further down than a chip. */
+  function fitGrid() {
+    fitText(gridEl.querySelectorAll('.mc-chip'), 8);
+    fitText(gridEl.querySelectorAll('.mc-list'), 7);
   }
 
   /** The widest rendered line of an element's text. */
@@ -340,34 +376,26 @@
   /* ---------- guess history ---------- */
 
   function renderGuesses() {
-    const guesses = store().guesses;
+    /*
+     * Only the misses are listed. A solved group is not history — it stays in
+     * the grid, in its own colour, the way the board keeps it.
+     */
+    const misses = [...store().guesses.entries()].filter(([, g]) => g.result !== 'correct');
     guessesEl.textContent = '';
-    countEl.textContent = guesses.length ? `(${guesses.length})` : '';
+    countEl.textContent = misses.length ? `(${misses.length})` : '';
 
-    if (!guesses.length) {
+    if (!misses.length) {
       const empty = document.createElement('div');
       empty.className = 'mc-empty';
-      empty.textContent = 'Nothing yet. Every group you submit shows up here.';
+      empty.textContent = 'None yet. A group that does not match shows up here.';
       guessesEl.appendChild(empty);
       return;
     }
 
-    /*
-     * Solved groups sit on top, the way the board stacks them, and the misses
-     * follow below. Each keeps the order it was submitted in — the sort is
-     * stable — and its own number, which comes from the stored position.
-     */
-    const solved = (guess) => (guess.result === 'correct' ? 1 : 0);
-    const ordered = [...guesses.entries()].sort(([, a], [, b]) => solved(b) - solved(a));
-
-    ordered.forEach(([i, guess]) => {
+    misses.forEach(([i, guess]) => {
       const row = document.createElement('div');
       row.className = `mc-guess mc-${guess.result}`;
       row.title = resultLabel(guess, i);
-      // A solved group wears the colour the board gave that row.
-      if (guess.result === 'correct' && guess.color) {
-        row.style.setProperty('--mc-match', guess.color);
-      }
 
       const badge = document.createElement('div');
       badge.className = 'mc-badge';
@@ -398,16 +426,14 @@
     });
   }
 
+  /** Numbered by where the guess falls in the whole history, so the count of lives reads true. */
   function resultLabel(guess, i) {
-    const result =
-      guess.result === 'correct' ? 'correct' : guess.result === 'one-away' ? 'one away' : 'wrong';
-    return `Guess ${i + 1}: ${result}`;
+    return `Guess ${i + 1}: ${guess.result === 'one-away' ? 'one away' : 'wrong'}`;
   }
 
   function noteFor(guess) {
     const parts = [];
     if (guess.result === 'one-away') parts.push('one away');
-    if (guess.category) parts.push(guess.category);
     if (guess.repeats) parts.push(`submitted ${guess.repeats + 1}×`);
     return parts.join(' · ');
   }

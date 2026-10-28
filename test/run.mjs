@@ -54,11 +54,11 @@ const TEST = `(async () => {
   };
   const stored = () => Object.values(chrome.storage.local._data)[0];
   const rows = () => [...document.querySelectorAll('#mc-panel .mc-guess')];
-  const notes = () =>
-    [...document.querySelectorAll('#mc-panel .mc-note')].map((n) => n.textContent).join(' | ');
   const pick = (words) => { for (const w of words) chips().find((c) => c.textContent === w)?.click(); };
   const guessColor = (i) =>
     getComputedStyle(rows()[i].querySelector('.mc-word')).backgroundColor;
+  const solvedRows = () => [...document.querySelectorAll('#mc-panel .mc-done')];
+  const solvedList = (i) => solvedRows()[i].querySelector('.mc-list').textContent;
 
   const panel = await waitFor(() => document.getElementById('mc-panel'));
   check('panel mounts when the board appears', () => panel);
@@ -129,27 +129,35 @@ const TEST = `(async () => {
   await sleep(200);
   document.getElementById('submit').click();
   await sleep(3400);
-  check('a solved group is logged as correct', () =>
-    rows().length === 2 && rows().some((r) => r.classList.contains('mc-correct')));
-  // The board keeps solved groups above the tiles still in play; so does the panel.
-  check('a solved group is listed above the misses', () =>
-    rows()[0].classList.contains('mc-correct') && rows()[1].classList.contains('mc-one-away'));
-  check('the category name is captured', () => /shades of blue/i.test(notes()));
+  // A solved group stays in the grid, as the board keeps it — not in the miss list.
+  check('a solved group stays in the grid', () =>
+    solvedRows().length === 1 && solvedList(0).split(', ').sort().join() === 'NAVY,ROYAL,SKY,TEAL');
+  check('its words are written out with commas, as the board writes them', () =>
+    /^[A-Z]+(, [A-Z]+){3}$/.test(solvedList(0)));
+  check('a solved group is not listed as a miss', () =>
+    rows().length === 1 && rows()[0].classList.contains('mc-one-away'));
+  check('the solved group sits above the words still in play', () =>
+    document.querySelector('#mc-panel .mc-grid').firstElementChild === solvedRows()[0]);
+  check('the category name is on the solved group', () =>
+    /shades of blue/i.test(solvedRows()[0].querySelector('.mc-name').textContent));
   // Shades of blue is the yellow row on the mock board.
   check('a solved group takes the colour of its row', () =>
-    guessColor(0) === 'rgb(249, 223, 109)');
+    getComputedStyle(solvedRows()[0]).backgroundColor === 'rgb(249, 223, 109)');
   check('the row colour is persisted', () => stored().guesses[1].color === 'rgb(249, 223, 109)');
-  check('solved words leave the grid', () => chips().length === 12);
+  check('solved words are no longer draggable chips', () => chips().length === 12);
+  check('a solved group cannot be dragged', () => grips().length === 3);
 
   pick(['HEARTS', 'SPIT', 'CROW', 'CHALK']);
   await sleep(200);
   document.getElementById('submit').click();
   await sleep(3400);
   check('a plain miss is logged as wrong', () =>
-    rows().length === 3 && rows()[2].classList.contains('mc-wrong'));
-  check('a plain miss reads red', () => guessColor(2) === 'rgb(192, 57, 43)');
-  check('every guess lists its four words', () => rows()[2].querySelectorAll('.mc-word').length === 4);
-  check('guesses reach storage', () => stored().guesses.length === 3);
+    rows().length === 2 && rows()[1].classList.contains('mc-wrong'));
+  check('a plain miss reads red', () => guessColor(1) === 'rgb(192, 57, 43)');
+  check('every miss lists its four words', () => rows()[1].querySelectorAll('.mc-word').length === 4);
+  check('the misses are counted, the solved group is not', () =>
+    document.querySelector('#mc-panel .mc-count').textContent === '(2)');
+  check('every guess reaches storage', () => stored().guesses.length === 3);
 
   // HEARTS, SPIT, CROW, CHALK came back wrong rather than one away, so no
   // three of them share a group and any selection around three is a dead end.
