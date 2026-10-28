@@ -212,15 +212,22 @@
   const words = () => tiles.map((t) => t.word);
   const selection = () => [...selected];
 
-  const sameSet = (a, b) => a.size === b.size && [...a].every((v) => b.has(v));
-
-  /** Replays a pointer press for tiles that do not listen for plain clicks. */
-  function pointerPoke(el) {
+  /*
+   * Presses a tile the way a mouse does. The page may be listening on the
+   * pointer events, on the mouse events or on the click, and it may check where
+   * the press landed — a bare el.click() carries no coordinates and no press
+   * before it, which is enough for a handler to ignore it. A real user produces
+   * the whole sequence, so send the whole sequence: one click still reaches a
+   * click handler, and nothing that a user cannot do is sent twice.
+   */
+  function press(el) {
     const rect = el.getBoundingClientRect();
     const init = {
       bubbles: true,
       cancelable: true,
       composed: true,
+      view: window,
+      detail: 1,
       clientX: rect.left + rect.width / 2,
       clientY: rect.top + rect.height / 2,
       button: 0,
@@ -229,10 +236,15 @@
       pointerType: 'mouse',
       isPrimary: true,
     };
+    const release = { ...init, buttons: 0 };
+    el.dispatchEvent(new PointerEvent('pointerover', init));
+    el.dispatchEvent(new MouseEvent('mouseover', init));
     el.dispatchEvent(new PointerEvent('pointerdown', init));
     el.dispatchEvent(new MouseEvent('mousedown', init));
-    el.dispatchEvent(new PointerEvent('pointerup', { ...init, buttons: 0 }));
-    el.dispatchEvent(new MouseEvent('mouseup', { ...init, buttons: 0 }));
+    el.focus?.();
+    el.dispatchEvent(new PointerEvent('pointerup', release));
+    el.dispatchEvent(new MouseEvent('mouseup', release));
+    el.dispatchEvent(new MouseEvent('click', release));
   }
 
   NS.board = {
@@ -245,20 +257,12 @@
     words,
     selection,
     isSelected: (word) => selected.has(word),
-    /** Forwards a click to the real tile so the game registers the selection. */
+    /** Forwards a press to the real tile so the game registers the selection. */
     clickWord(word) {
       const tile = tiles.find((t) => t.word === word);
       if (!tile) return false;
-      const box = hitboxOf(tile.el);
-      const before = selectionFromDom();
-      box.click();
-      requestAnimationFrame(() => {
-        // If the page tracks selection itself and ignored the click, it is
-        // listening for pointer events instead — replay those too.
-        const after = selectionFromDom();
-        if (before && after && sameSet(before, after)) pointerPoke(box);
-        requestAnimationFrame(syncSelection);
-      });
+      press(hitboxOf(tile.el));
+      requestAnimationFrame(syncSelection);
       return true;
     },
     on(name, fn) {
