@@ -356,6 +356,10 @@
       const row = document.createElement('div');
       row.className = `mc-guess mc-${guess.result}`;
       row.title = resultLabel(guess, i);
+      // A solved group wears the colour the board gave that row.
+      if (guess.result === 'correct' && guess.color) {
+        row.style.setProperty('--mc-match', guess.color);
+      }
 
       const badge = document.createElement('div');
       badge.className = 'mc-badge';

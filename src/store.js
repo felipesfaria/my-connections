@@ -74,6 +74,7 @@
       if (same) {
         same.result = guess.result;
         same.category = guess.category ?? same.category;
+        same.color = guess.color ?? same.color;
         same.repeats = (same.repeats ?? 0) + 1;
       } else {
         data.guesses.push(guess);

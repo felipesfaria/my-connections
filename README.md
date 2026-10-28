@@ -8,8 +8,9 @@ It adds a small panel next to the board with the two things the game does not gi
   whole row by its handle once the group is together. The real board only offers a random shuffle,
   which throws your grouping away.
 - **See your previous guesses.** Every group you submit is recorded with its outcome —
-  green for correct (with the category name), yellow for "one away", grey for wrong — so you
-  never burn a life re-submitting something you already tried.
+  a solved group keeps the colour the board gave that row (with the category name), a near miss
+  is orange and anything further off is red — so you never burn a life re-submitting something
+  you already tried.
 
 Clicking a word in the panel selects it on the real board, so you can play entirely from your own
 layout. Your arrangement and history are saved per day and survive a page reload.
@@ -45,8 +46,8 @@ every tile reads "SKYSKY". Selection is tracked from your clicks and reconciled 
 selected-state the page exposes (`aria-pressed`, a `selected` class).
 
 `src/content.js` watches what happens after a submit: if the four words leave the board the guess
-was correct and the category name is read off the solved banner, otherwise a "one away" toast
-decides between yellow and grey.
+was correct, and the category name and the row's colour are read off the solved banner, otherwise
+a "one away" toast decides between orange and red.
 
 `src/store.js` keeps one record per day in `chrome.storage.local` and drops records older than two
 weeks. Nothing leaves your browser, and the extension never reads the puzzle's answer data.

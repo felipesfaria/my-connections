@@ -44,11 +44,11 @@
         place-items: center;
         opacity: 0;
       }
+      /* Each solved row is tinted by its group, as the real board does. */
       .solved {
         margin-bottom: 8px;
         padding: 12px;
         border-radius: 6px;
-        background: #a0c35a;
         text-align: center;
       }
       .solved b {
@@ -121,10 +121,10 @@
 
     <script>
       const GROUPS = [
-        { name: 'Shades of blue', words: ['NAVY', 'ROYAL', 'SKY', 'TEAL'] },
-        { name: 'Card games', words: ['BRIDGE', 'HEARTS', 'SPIT', 'WAR'] },
-        { name: 'Kinds of bar', words: ['CROW', 'SALAD', 'SNACK', 'TOWEL'] },
-        { name: '___ board', words: ['CHALK', 'DART', 'KEY', 'SURF'] },
+        { name: 'Shades of blue', color: '#f9df6d', words: ['NAVY', 'ROYAL', 'SKY', 'TEAL'] },
+        { name: 'Card games', color: '#a0c35a', words: ['BRIDGE', 'HEARTS', 'SPIT', 'WAR'] },
+        { name: 'Kinds of bar', color: '#b0c4ef', words: ['CROW', 'SALAD', 'SNACK', 'TOWEL'] },
+        { name: '___ board', color: '#ba81c5', words: ['CHALK', 'DART', 'KEY', 'SURF'] },
       ];
 
       const boardEl = document.getElementById('board');
@@ -196,6 +196,7 @@
           live = live.filter((w) => !group.words.includes(w));
           const banner = document.createElement('div');
           banner.className = 'solved';
+          banner.style.background = group.color;
           banner.innerHTML = `<b>${group.name}</b>${group.words.join(', ')}`;
           solvedEl.appendChild(banner);
           render();

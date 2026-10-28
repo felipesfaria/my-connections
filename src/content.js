@@ -49,22 +49,53 @@
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  /** Pulls the category name out of the solved-group banner, if it is readable. */
-  function findCategory(words) {
+  /** An element's background, unless it is see-through or part of the page's grey furniture. */
+  function tintOf(el) {
+    const parts = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+    if (!parts) return null;
+    const [r, g, b, a = 1] = parts.map(Number);
+    if (a < 0.9) return null;
+    // A row colour always has some hue; that is what rules out the backdrop.
+    if (Math.max(r, g, b) - Math.min(r, g, b) < 12) return null;
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  /*
+   * The colour the board painted a solved row. The element that holds the words
+   * is often a bare wrapper around the coloured one, so try all of them before
+   * looking outwards from the closest.
+   */
+  function rowColor(candidates) {
+    for (const el of candidates) {
+      const tint = tintOf(el);
+      if (tint) return tint;
+    }
+    for (let node = candidates[0]; node && node !== document.body; node = node.parentElement) {
+      const tint = tintOf(node);
+      if (tint) return tint;
+    }
+    return null;
+  }
+
+  /** Pulls the name and colour out of the solved-group banner, if it is readable. */
+  function findSolvedGroup(words) {
     const candidates = [...document.body.querySelectorAll('div, section, li')].filter((el) => {
+      // Our own panel lists the same words; it must not be mistaken for the board.
+      if (el.closest('#mc-panel')) return false;
       const text = el.textContent;
       return text.length < 240 && words.every((w) => text.toUpperCase().includes(w));
     });
     if (!candidates.length) return null;
 
     candidates.sort((a, b) => a.textContent.length - b.textContent.length);
-    let text = candidates[0].textContent.trim();
+    const banner = candidates[0];
+    let text = banner.textContent.trim();
     for (const word of words) text = text.replace(new RegExp(escapeRe(word), 'i'), ' ');
     const name = text
       .replace(/[,·|]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    return name ? name.slice(0, 60) : null;
+    return { category: name ? name.slice(0, 60) : null, color: rowColor(candidates) };
   }
 
   async function onSubmit(words) {
@@ -78,10 +109,13 @@
     const solved = words.every((w) => !stillOnBoard.has(w));
     const result = solved ? 'correct' : /one\s*away/i.test(noise) ? 'one-away' : 'wrong';
 
+    const group = solved ? findSolvedGroup(words) : null;
+
     store.addGuess({
       words,
       result,
-      category: solved ? findCategory(words) : null,
+      category: group?.category ?? null,
+      color: group?.color ?? null,
       at: Date.now(),
     });
     panel.refreshGuesses();

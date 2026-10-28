@@ -57,6 +57,8 @@ const TEST = `(async () => {
   const notes = () =>
     [...document.querySelectorAll('#mc-panel .mc-note')].map((n) => n.textContent).join(' | ');
   const pick = (words) => { for (const w of words) chips().find((c) => c.textContent === w)?.click(); };
+  const guessColor = (i) =>
+    getComputedStyle(rows()[i].querySelector('.mc-word')).backgroundColor;
 
   const panel = await waitFor(() => document.getElementById('mc-panel'));
   check('panel mounts when the board appears', () => panel);
@@ -121,6 +123,7 @@ const TEST = `(async () => {
   await sleep(3400);
   check('a near miss is logged as one away', () =>
     rows().length === 1 && rows()[0].classList.contains('mc-one-away'));
+  check('a near miss reads orange', () => guessColor(0) === 'rgb(232, 144, 60)');
 
   pick(['NAVY', 'ROYAL', 'SKY', 'TEAL']);
   await sleep(200);
@@ -129,6 +132,10 @@ const TEST = `(async () => {
   check('a solved group is logged as correct', () =>
     rows().length === 2 && rows()[1].classList.contains('mc-correct'));
   check('the category name is captured', () => /shades of blue/i.test(notes()));
+  // Shades of blue is the yellow row on the mock board.
+  check('a solved group takes the colour of its row', () =>
+    guessColor(1) === 'rgb(249, 223, 109)');
+  check('the row colour is persisted', () => stored().guesses[1].color === 'rgb(249, 223, 109)');
   check('solved words leave the grid', () => chips().length === 12);
 
   pick(['HEARTS', 'SPIT', 'CROW', 'CHALK']);
@@ -137,6 +144,7 @@ const TEST = `(async () => {
   await sleep(3400);
   check('a plain miss is logged as wrong', () =>
     rows().length === 3 && rows()[2].classList.contains('mc-wrong'));
+  check('a plain miss reads red', () => guessColor(2) === 'rgb(192, 57, 43)');
   check('every guess lists its four words', () => rows()[2].querySelectorAll('.mc-word').length === 4);
   check('guesses reach storage', () => stored().guesses.length === 3);
 
