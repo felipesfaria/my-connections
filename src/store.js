@@ -83,6 +83,12 @@
       return !same;
     },
 
+    /** Puts a guess already recorded right, once the board shows what it really was. */
+    amend(guess, patch) {
+      Object.assign(guess, patch);
+      save();
+    },
+
     get panel() {
       return data.panel;
     },

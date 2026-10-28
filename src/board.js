@@ -12,12 +12,15 @@
 
   // A tile label: one short, all-caps token or phrase.
   const WORD_RE = /^[\p{L}\p{N}][\p{L}\p{N}'’\-.&!? ]{0,23}$/u;
+  const GROUP = 4; // words in a group: the board loses them a group at a time
   const BOARD_SIZES = [16, 12, 8, 4];
 
   const listeners = { board: [], selection: [], submit: [] };
   let tiles = []; // [{ el, word }]
   let selected = new Set();
+  let retired = new Set(); // words solved and gone from the board for good
   let domSchemeSeen = false; // true once the page exposes its own selected-state
+  let cardSchemeSeen = false; // true once the page marks its own cards
   let lastSubmit = 0;
 
   const emit = (name, ...args) => {
@@ -90,12 +93,19 @@
     const leaves = [...document.body.querySelectorAll('div, span, button, li, p')].filter(
       (el) => {
         if (el.children.length !== 0 || !isVisible(el)) return false;
+        // Our own panel holds a copy of the words; reading it back would make
+        // the board whatever the panel last thought it was.
+        if (el.closest('#mc-panel')) return false;
         const text = el.textContent.trim();
         if (!WORD_RE.test(text)) return false;
         // Tiles read as caps; the page may do that in CSS rather than in the text.
-        return (
-          text === text.toUpperCase() || getComputedStyle(el).textTransform === 'uppercase'
-        );
+        if (text !== text.toUpperCase() && getComputedStyle(el).textTransform !== 'uppercase') {
+          return false;
+        }
+        // A word in a group's colour is in a solved row, not on the board. The
+        // page leaves the words on screen once their group is done, and at the
+        // end of the puzzle they are all that is left to find.
+        return !NS.tint.near(el);
       }
     );
     if (leaves.length < 4) return [];
@@ -123,16 +133,34 @@
   /** Re-reads the board. Emits "board" when the set of words changed. */
   function refresh() {
     let labels = labelsFromTestIds();
-    if (labels.length < 4) labels = labelsByHeuristic();
+    if (labels.length >= GROUP) cardSchemeSeen = true;
+    /*
+     * Once the page has marked its own cards, they are the whole board. The
+     * words do not leave the screen when a group is solved — the page moves
+     * them into a solved row — so the text heuristic would read those rows
+     * back as tiles, and at the end of the puzzle, when every word is in one,
+     * it would hand back a full board that is nothing but the answer.
+     */
+    else if (!cardSchemeSeen) labels = labelsByHeuristic();
 
     const seen = new Set();
     const next = [];
     for (const el of labels) {
       const word = labelOf(el);
-      if (!word || seen.has(word)) continue;
+      // A word that has left the board cannot come back, whatever a read says.
+      if (!word || seen.has(word) || retired.has(word)) continue;
       seen.add(word);
       next.push({ el, word });
     }
+
+    /*
+     * The board loses one group at a time and never more, so a read that drops
+     * some other number of words is the page caught mid-render. Acting on it
+     * would retire words that are still in play and throw away my layout.
+     */
+    const lost = tiles.filter(({ word }) => !seen.has(word)).length;
+    if (lost > GROUP || lost % GROUP) return tiles;
+    for (const { word } of tiles) if (!seen.has(word)) retired.add(word);
 
     const changed =
       next.length !== tiles.length || next.some((t, i) => t.word !== tiles[i].word);

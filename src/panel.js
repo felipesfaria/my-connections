@@ -7,7 +7,7 @@
 
   const COLS = 4; // words per row
 
-  let root, gridEl, guessesEl, countEl, collapseBtn, warnEl;
+  let root, gridEl, guessesEl, countEl, collapseBtn, warnEl, hintEl;
   let order = []; // my own arrangement of the words still on the board
   let drag = null; // { kind: 'word' | 'row', from } while a drag is in flight
   let dragged = false;
@@ -36,6 +36,7 @@
 
     gridEl = root.querySelector('.mc-grid');
     warnEl = root.querySelector('.mc-warn');
+    hintEl = root.querySelector('.mc-hint');
     guessesEl = root.querySelector('.mc-guesses');
     countEl = root.querySelector('.mc-count');
     collapseBtn = root.querySelector('[data-act="collapse"]');
@@ -153,6 +154,8 @@
       });
       gridEl.appendChild(row);
     }
+    // Once the puzzle is solved there is nothing left to drag or click.
+    hintEl.hidden = !order.length;
     fitGrid();
   }
 

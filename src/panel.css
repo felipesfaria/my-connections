@@ -249,7 +249,8 @@
   line-height: 1.45;
 }
 
-#mc-panel .mc-warn[hidden] {
+#mc-panel .mc-warn[hidden],
+#mc-panel .mc-hint[hidden] {
   display: none;
 }
 

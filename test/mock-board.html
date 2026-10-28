@@ -55,6 +55,10 @@
         display: block;
         text-transform: uppercase;
       }
+      /* The real page keeps each solved word in its own element, as a tile was. */
+      .solved .word {
+        font-weight: 700;
+      }
       .controls {
         display: flex;
         gap: 8px;
@@ -131,6 +135,9 @@
       const solvedEl = document.getElementById('solved');
       let live = GROUPS.flatMap((g) => g.words);
 
+      // ?plain hides the test ids, so the extension has to find the board by its text.
+      const PLAIN = new URLSearchParams(location.search).has('plain');
+
       const shuffle = (list) => {
         const out = list.slice();
         for (let i = out.length - 1; i > 0; i--) {
@@ -145,7 +152,7 @@
         live.forEach((word, i) => {
           const card = document.createElement('button');
           card.className = 'card';
-          card.dataset.testid = `card-${i}`;
+          if (!PLAIN) card.dataset.testid = `card-${i}`;
           card.setAttribute('aria-pressed', 'false');
           card.dataset.word = word;
           // Title case on purpose: the real page may uppercase through CSS.
@@ -197,7 +204,8 @@
           const banner = document.createElement('div');
           banner.className = 'solved';
           banner.style.background = group.color;
-          banner.innerHTML = `<b>${group.name}</b>${group.words.join(', ')}`;
+          const listed = group.words.map((w) => `<span class="word">${w}</span>`).join(', ');
+          banner.innerHTML = `<b>${group.name}</b>${listed}`;
           solvedEl.appendChild(banner);
           render();
         } else {
@@ -210,6 +218,7 @@
       render();
     </script>
 
+    <script src="../src/tint.js"></script>
     <script src="../src/board.js"></script>
     <script src="../src/store.js"></script>
     <script src="../src/deduce.js"></script>

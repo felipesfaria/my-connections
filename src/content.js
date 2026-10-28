@@ -49,32 +49,17 @@
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  /** An element's background, unless it is see-through or part of the page's grey furniture. */
-  function tintOf(el) {
-    const parts = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
-    if (!parts) return null;
-    const [r, g, b, a = 1] = parts.map(Number);
-    if (a < 0.9) return null;
-    // A row colour always has some hue; that is what rules out the backdrop.
-    if (Math.max(r, g, b) - Math.min(r, g, b) < 12) return null;
-    return `rgb(${r}, ${g}, ${b})`;
-  }
-
   /*
    * The colour the board painted a solved row. The element that holds the words
-   * is often a bare wrapper around the coloured one, so try all of them before
-   * looking outwards from the closest.
+   * is often a bare wrapper around the coloured one, so try each of them on its
+   * own box before looking outwards from the closest.
    */
   function rowColor(candidates) {
     for (const el of candidates) {
-      const tint = tintOf(el);
-      if (tint) return tint;
+      const own = NS.tint.near(el, 1);
+      if (own) return own;
     }
-    for (let node = candidates[0]; node && node !== document.body; node = node.parentElement) {
-      const tint = tintOf(node);
-      if (tint) return tint;
-    }
-    return null;
+    return NS.tint.near(candidates[0]);
   }
 
   /** Pulls the name and colour out of the solved-group banner, if it is readable. */
@@ -122,12 +107,38 @@
     panel.setWords(board.words());
   }
 
+  /*
+   * Puts the history right against the board. A miss whose four words have all
+   * left the board together, into a solved row of their own, was never a miss:
+   * the outcome was read while the page was still catching up, or the record is
+   * simply older than what the page now shows. Only a solved row is drawn in a
+   * colour and it holds nothing but its own group, so a colour here is the
+   * proof — four words that merely drifted off the board across two different
+   * groups are never found inside one.
+   */
+  function reconcile() {
+    const onBoard = new Set(board.words());
+    let corrected = false;
+    for (const guess of store.guesses) {
+      if (guess.result === 'correct') continue;
+      if (guess.words.some((word) => onBoard.has(word))) continue;
+      const group = findSolvedGroup(guess.words);
+      if (!group?.color) continue;
+      store.amend(guess, { result: 'correct', category: group.category, color: group.color });
+      corrected = true;
+    }
+    return corrected;
+  }
+
   function onBoardChange(words) {
-    if (!mounted && words.length >= 4) {
+    // A finished puzzle has no words left, so the history is what there is to show.
+    if (!mounted && (words.length >= 4 || store.guesses.length)) {
       panel.mount();
       mounted = true;
     }
-    if (mounted) panel.setWords(words);
+    if (!mounted) return;
+    if (reconcile()) panel.refreshGuesses();
+    panel.setWords(words);
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, respond) => {

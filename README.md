@@ -46,15 +46,27 @@ animation — so the word is read from the innermost text and the copies are col
 every tile reads "SKYSKY". Selection is tracked from your clicks and reconciled with whatever
 selected-state the page exposes (`aria-pressed`, a `selected` class).
 
+A solved group does not leave the page — it moves into a solved row — so the text heuristic has to
+know not to read those rows back as tiles, or a finished puzzle looks like a full board of answers.
+Anything drawn in a group's colour is ruled out, as is the panel's own copy of the words, and a
+word that has left the board is never read back onto it.
+
 `src/content.js` watches what happens after a submit: if the four words leave the board the guess
 was correct, and the category name and the row's colour are read off the solved banner, otherwise
 a "one away" toast decides between orange and red.
+
+That reading can be wrong — the page may not have caught up yet — so the history is checked against
+the board whenever the board changes. A miss whose four words have all left the board together,
+into a solved row of their own, is put right: only a solved row carries a colour, and it holds
+nothing but its own group, so four words that merely drifted off across two groups are never
+mistaken for one.
 
 `src/store.js` keeps one record per day in `chrome.storage.local` and drops records older than two
 weeks. Nothing leaves your browser, and the extension never reads the puzzle's answer data.
 
 | File | Role |
 | --- | --- |
+| `src/tint.js` | Telling a group's colour from the board's own greys |
 | `src/board.js` | Board detection, selection tracking, submit detection |
 | `src/store.js` | Per-day persistence |
 | `src/panel.js` | The panel UI and drag-and-drop |
@@ -75,8 +87,10 @@ node test/run.mjs     # headless Chrome, no dependencies to install
 
 It checks that the panel mounts, that dragging swaps two words and sticks, that clicking a chip
 selects the real tile (and still does so after a drag), that a solved group stays in the grid in
-its own colour with its category name, and that one away / wrong guesses are listed below it. Set `CHROME=<path>` if Chrome is not where it
-usually lives.
+its own colour with its category name, and that one away / wrong guesses are listed below it. It
+runs three times over: once on the board as NYT marks it, once on a board with no test ids so the
+text heuristic has to find it, and once playing the puzzle out to the end. Set `CHROME=<path>` if
+Chrome is not where it usually lives.
 
 ## If the panel does not show up
 
