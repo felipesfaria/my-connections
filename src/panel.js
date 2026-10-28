@@ -352,7 +352,15 @@
       return;
     }
 
-    guesses.forEach((guess, i) => {
+    /*
+     * Solved groups sit on top, the way the board stacks them, and the misses
+     * follow below. Each keeps the order it was submitted in — the sort is
+     * stable — and its own number, which comes from the stored position.
+     */
+    const solved = (guess) => (guess.result === 'correct' ? 1 : 0);
+    const ordered = [...guesses.entries()].sort(([, a], [, b]) => solved(b) - solved(a));
+
+    ordered.forEach(([i, guess]) => {
       const row = document.createElement('div');
       row.className = `mc-guess mc-${guess.result}`;
       row.title = resultLabel(guess, i);

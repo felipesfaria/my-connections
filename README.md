@@ -10,7 +10,8 @@ It adds a small panel next to the board with the two things the game does not gi
 - **See your previous guesses.** Every group you submit is recorded with its outcome —
   a solved group keeps the colour the board gave that row (with the category name), a near miss
   is orange and anything further off is red — so you never burn a life re-submitting something
-  you already tried.
+  you already tried. Solved groups stack at the top as they do on the board, with the misses
+  below them in the order you made them.
 
 Clicking a word in the panel selects it on the real board, so you can play entirely from your own
 layout. Your arrangement and history are saved per day and survive a page reload.

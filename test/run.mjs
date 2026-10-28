@@ -130,11 +130,14 @@ const TEST = `(async () => {
   document.getElementById('submit').click();
   await sleep(3400);
   check('a solved group is logged as correct', () =>
-    rows().length === 2 && rows()[1].classList.contains('mc-correct'));
+    rows().length === 2 && rows().some((r) => r.classList.contains('mc-correct')));
+  // The board keeps solved groups above the tiles still in play; so does the panel.
+  check('a solved group is listed above the misses', () =>
+    rows()[0].classList.contains('mc-correct') && rows()[1].classList.contains('mc-one-away'));
   check('the category name is captured', () => /shades of blue/i.test(notes()));
   // Shades of blue is the yellow row on the mock board.
   check('a solved group takes the colour of its row', () =>
-    guessColor(1) === 'rgb(249, 223, 109)');
+    guessColor(0) === 'rgb(249, 223, 109)');
   check('the row colour is persisted', () => stored().guesses[1].color === 'rgb(249, 223, 109)');
   check('solved words leave the grid', () => chips().length === 12);
 
