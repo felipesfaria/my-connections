@@ -1,7 +1,7 @@
 # My Connections
 
 A Chrome extension for the [NYT Connections](https://www.nytimes.com/games/connections) puzzle.
-It adds a small panel next to the board with the two things the game does not give you:
+It adds a small panel next to the board with the things the game does not give you:
 
 - **Rearrange the words freely.** The panel holds a copy of the 16 words that you can drag into
   any order, so you can park your four candidates on one row and keep them there — and drag a
@@ -12,6 +12,10 @@ It adds a small panel next to the board with the two things the game does not gi
   already tried. A group that does match stays in the grid instead, as a block in the colour the
   board gave that row with its category name, pinned above the words still in play — the same as
   the board itself.
+- **Reveal the answers (optional).** A "Revelar respostas" switch at the bottom of the panel is off
+  by default. Switch it on and the panel shows four buttons, one per group, each named with that
+  day's category title; click one to reveal the four words of that group. Off means off: nothing
+  is fetched until you turn the switch on.
 
 Clicking a word in the panel selects it on the real board, so you can play entirely from your own
 layout. Your arrangement and history are saved per day and survive a page reload.
@@ -29,6 +33,8 @@ layout. Your arrangement and history are saved per day and survive a page reload
 | Drag a word onto another | Swaps the two; every other word stays where it is |
 | Drag a row's ⠿ handle onto another row | Swaps the two rows, four words at a time |
 | Click a word | Selects / deselects that tile on the real board |
+| Revelar respostas (switch) | Shows one button per group, named by today's category title |
+| A group's title button | Reveals / hides that group's four words |
 | ⇆ | Shuffles your layout (the board is untouched) |
 | ↻ | Resets your layout to the board's own order |
 | − | Collapses the panel; drag the title bar to move it |
@@ -62,13 +68,22 @@ nothing but its own group, so four words that merely drifted off across two grou
 mistaken for one.
 
 `src/store.js` keeps one record per day in `chrome.storage.local` and drops records older than two
-weeks. Nothing leaves your browser, and the extension never reads the puzzle's answer data.
+weeks. Nothing leaves your browser.
+
+`src/answers.js` is the one place that touches the puzzle's answer data, and it only runs once
+"Revelar respostas" is switched on. It asks the same site for `/svc/connections/v2/<date>.json` (the
+file the game itself loads its puzzle from) and reads `categories[].title` and
+`categories[].cards[].content` out of it. The date comes from the page URL on an archive page,
+otherwise it is today's date, falling back to yesterday's; the date is printed above the buttons so
+a mismatch is easy to spot. The endpoint is undocumented, so if NYT changes it the panel says what
+went wrong instead of breaking.
 
 | File | Role |
 | --- | --- |
 | `src/tint.js` | Telling a group's colour from the board's own greys |
 | `src/board.js` | Board detection, selection tracking, submit detection |
 | `src/store.js` | Per-day persistence |
+| `src/answers.js` | Fetches and parses the day's answers, only on demand |
 | `src/panel.js` | The panel UI and drag-and-drop |
 | `src/content.js` | Boot, guess outcome resolution, popup messages |
 | `src/popup.*` | Toolbar popup |
@@ -87,7 +102,8 @@ node test/run.mjs     # headless Chrome, no dependencies to install
 
 It checks that the panel mounts, that dragging swaps two words and sticks, that clicking a chip
 selects the real tile (and still does so after a drag), that a solved group stays in the grid in
-its own colour with its category name, and that one away / wrong guesses are listed below it. It
+its own colour with its category name, and that one away / wrong guesses are listed below it, and that the "Revelar respostas" switch starts
+off, fetches nothing until it is turned on, and reveals one group at a time. It
 runs three times over: once on the board as NYT marks it, once on a board with no test ids so the
 text heuristic has to find it, and once playing the puzzle out to the end. Set `CHROME=<path>` if
 Chrome is not where it usually lives.

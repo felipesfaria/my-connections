@@ -8,6 +8,9 @@
   const COLS = 4; // words per row
 
   let root, gridEl, guessesEl, countEl, collapseBtn, warnEl, hintEl;
+  let answersToggle, answersListEl;
+  let answersFor = null; // date of the puzzle the answer buttons were drawn for
+  let answersToken = 0; // lets a late response be ignored if the toggle moved on
   let order = []; // my own arrangement of the words still on the board
   let drag = null; // { kind: 'word' | 'row', from } while a drag is in flight
   let dragged = false;
@@ -29,6 +32,14 @@
         <div class="mc-grid"></div>
         <div class="mc-warn" hidden></div>
         <div class="mc-hint">Drag a word onto another to swap them, or a row&rsquo;s handle onto another row to swap the two rows. Click a word to select it on the board.</div>
+        <div class="mc-answers">
+          <label class="mc-toggle">
+            <input class="mc-toggle-input" type="checkbox" data-act="answers" />
+            <span class="mc-switch" aria-hidden="true"></span>
+            <span class="mc-toggle-label">Revelar respostas</span>
+          </label>
+          <div class="mc-ans-list" hidden></div>
+        </div>
         <div class="mc-sub">Misses <span class="mc-count"></span></div>
         <div class="mc-guesses"></div>
       </div>`;
@@ -40,6 +51,10 @@
     guessesEl = root.querySelector('.mc-guesses');
     countEl = root.querySelector('.mc-count');
     collapseBtn = root.querySelector('[data-act="collapse"]');
+    answersToggle = root.querySelector('.mc-toggle-input');
+    answersListEl = root.querySelector('.mc-ans-list');
+    answersToggle.checked = false; // off every time the page loads
+    answersToggle.addEventListener('change', onAnswersToggle);
 
     root.querySelector('.mc-head').addEventListener('pointerdown', onHeadPointerDown);
     root.addEventListener('click', onPanelClick);
@@ -339,8 +354,88 @@
       return;
     }
 
+    const answer = closest(event.target, '.mc-ans');
+    if (answer) {
+      toggleAnswer(answer);
+      return;
+    }
+
     const index = indexOfChip(event.target);
     if (index != null && !dragged) NS.board.clickWord(order[index]);
+  }
+
+  /* ---------- answers ---------- */
+
+  // The answers come in difficulty order, which is also the order of the board's colours.
+  const ANSWER_COLORS = ['yellow', 'green', 'blue', 'purple'];
+
+  /** Nothing is fetched until the toggle is switched on. */
+  function onAnswersToggle() {
+    const on = answersToggle.checked;
+    answersListEl.hidden = !on;
+    if (on) loadAnswers();
+  }
+
+  async function loadAnswers() {
+    if (answersFor) return; // already drawn for this puzzle
+    const token = ++answersToken;
+    answersMessage('Carregando…', false);
+    try {
+      const puzzle = await NS.answers.get();
+      if (token === answersToken) renderAnswers(puzzle);
+    } catch (err) {
+      if (token === answersToken) {
+        answersMessage(`Não consegui carregar as respostas (${err.message}).`, true);
+      }
+    }
+  }
+
+  function answersMessage(text, isError) {
+    const msg = document.createElement('div');
+    msg.className = `mc-ans-msg${isError ? ' mc-ans-err' : ''}`;
+    msg.textContent = text;
+    answersListEl.replaceChildren(msg);
+  }
+
+  /** One button per group, named by that day's title; its words stay hidden until it is clicked. */
+  function renderAnswers({ date, groups }) {
+    const nodes = [];
+
+    const caption = document.createElement('div');
+    caption.className = 'mc-ans-date';
+    caption.textContent = date;
+    nodes.push(caption);
+
+    groups.forEach((group, i) => {
+      const item = document.createElement('div');
+      item.className = `mc-ans-item mc-ans-${ANSWER_COLORS[i % ANSWER_COLORS.length]}`;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'mc-ans';
+      button.textContent = group.title;
+      button.setAttribute('aria-expanded', 'false');
+
+      const words = document.createElement('div');
+      words.className = 'mc-ans-words';
+      words.textContent = group.words.join(', ');
+      words.hidden = true;
+
+      item.append(button, words);
+      nodes.push(item);
+    });
+
+    answersListEl.replaceChildren(...nodes);
+    answersFor = date;
+  }
+
+  function toggleAnswer(button) {
+    const item = button.closest('.mc-ans-item');
+    const words = item.querySelector('.mc-ans-words');
+    const open = words.hidden; // hidden now, so this click opens it
+    words.hidden = !open;
+    item.classList.toggle('mc-open', open);
+    button.setAttribute('aria-expanded', String(open));
   }
 
   /* ---------- dead-end warning ---------- */

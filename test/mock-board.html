@@ -131,6 +131,24 @@
         { name: '___ board', color: '#ba81c5', words: ['CHALK', 'DART', 'KEY', 'SURF'] },
       ];
 
+      // Stand-in for the endpoint the real game loads its puzzle from. It counts
+      // its calls so the tests can show nothing is fetched until it is asked for.
+      window.__answerFetches = 0;
+      const realFetch = window.fetch.bind(window);
+      window.fetch = (url, ...rest) => {
+        if (!String(url).includes('/svc/connections/v2/')) return realFetch(url, ...rest);
+        window.__answerFetches++;
+        const body = {
+          status: 'OK',
+          print_date: String(url).match(/\d{4}-\d{2}-\d{2}/)[0],
+          categories: GROUPS.map((g) => ({
+            title: g.name,
+            cards: g.words.map((content, position) => ({ content, position })),
+          })),
+        };
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      };
+
       const boardEl = document.getElementById('board');
       const solvedEl = document.getElementById('solved');
       let live = GROUPS.flatMap((g) => g.words);
@@ -222,6 +240,7 @@
     <script src="../src/board.js"></script>
     <script src="../src/store.js"></script>
     <script src="../src/deduce.js"></script>
+    <script src="../src/answers.js"></script>
     <script src="../src/panel.js"></script>
     <script src="../src/content.js"></script>
   </body>
