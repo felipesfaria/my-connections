@@ -69,6 +69,44 @@ const TEST = `(async () => {
     return chips().map((c) => c.textContent).sort().join() === onBoard.join();
   });
 
+  // "Revelar respostas": off until asked, nothing fetched until then.
+  const toggle = document.querySelector('#mc-panel .mc-toggle-input');
+  const ansList = document.querySelector('#mc-panel .mc-ans-list');
+  const ansItems = () => [...document.querySelectorAll('#mc-panel .mc-ans-item')];
+  const ansButtons = () => [...document.querySelectorAll('#mc-panel .mc-ans')];
+  check('the answers toggle is there and starts off', () => toggle && !toggle.checked);
+  check('no answer buttons are showing by default', () => ansList.hidden && ansButtons().every((b) => b.offsetParent === null));
+  check('nothing is fetched while the toggle is off', () => window.__answerFetches === 0);
+  toggle.click();
+  await waitFor(() => ansButtons().length === 4);
+  check('turning it on shows four buttons', () => !ansList.hidden && ansButtons().length === 4);
+  check('each button carries that day\u2019s title', () =>
+    ansButtons().map((b) => b.textContent).join('|') === 'Shades of blue|Card games|Kinds of bar|___ board');
+  check('the answers are fetched once, on demand', () => window.__answerFetches === 1);
+  check('the words stay hidden until a button is clicked', () =>
+    ansItems().every((i) => i.querySelector('.mc-ans-words').hidden));
+  ansButtons()[0].click();
+  await sleep(100);
+  check('clicking a title reveals that group\u2019s words', () => {
+    const words = ansItems()[0].querySelector('.mc-ans-words');
+    return !words.hidden && words.textContent.split(', ').sort().join() === 'NAVY,ROYAL,SKY,TEAL';
+  });
+  check('the other groups stay hidden', () =>
+    ansItems().slice(1).every((i) => i.querySelector('.mc-ans-words').hidden));
+  check('an opened group takes its row colour', () =>
+    getComputedStyle(ansItems()[0]).backgroundColor === 'rgb(249, 223, 109)');
+  ansButtons()[0].click();
+  await sleep(100);
+  check('clicking it again hides the words', () => ansItems()[0].querySelector('.mc-ans-words').hidden);
+  toggle.click();
+  await sleep(100);
+  check('turning the toggle off hides the buttons', () => ansList.hidden);
+  toggle.click();
+  await sleep(100);
+  check('turning it back on does not fetch again', () => window.__answerFetches === 1 && !ansList.hidden);
+  toggle.click();
+  await sleep(100);
+
   // Drag the first word onto the sixth: the two swap places.
   const before = words();
   dragTo(chips()[0], chips()[5]);
@@ -297,6 +335,9 @@ const PLAIN = `(async () => {${PRELUDE}
     const onBoard = [...document.querySelectorAll('.card')].map((c) => c.dataset.word).sort();
     return __myConnections.board.words().sort().join() === onBoard.join();
   });
+
+  check('the answers toggle starts off on a fresh load', () =>
+    !document.querySelector('#mc-panel .mc-toggle-input').checked && window.__answerFetches === 0);
 
   await solve(['NAVY', 'ROYAL', 'SKY', 'TEAL']);
   check('the guess is read as solved, not as a miss', () => misses().length === 0);
